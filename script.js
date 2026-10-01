@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbybFL7WTGTZuEDFS1_KHSJVgZkLryh1Y6WXbPO942Bgs5lmfuWF7ZsebLpy67J34I4KHQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNfm6WaDoh1y5_fZRu6rvC5Ib4ogvCsK5_tklcCDXKUyzMuS5bWEFEynnSZvS2PA0Png/exec";
 
 let allRecords = [];
 
