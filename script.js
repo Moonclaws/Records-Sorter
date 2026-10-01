@@ -1,3 +1,4 @@
+// PASTE YOUR NEW URL HERE
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkzh9zSqjYL3w7bujHdnQG1G7KRZHLsL8wBw6e-fHLJxGKtFAbWiHL7LOh32Uw621t/exec";
 
 let allRecords = [];
@@ -5,14 +6,19 @@ let allRecords = [];
 async function init() {
   const resultsGrid = document.getElementById('resultsGrid');
   try {
+    console.log("Fetching from:", APPS_SCRIPT_URL);
     const response = await fetch(APPS_SCRIPT_URL);
+    
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
     const data = await response.json();
-    allRecords = data.records;
+    allRecords = data.records || [];
+    console.log("Loaded:", allRecords.length, "records");
     
     populateDropdowns();
-    applyFilters(); // Initial render
+    applyFilters();
   } catch (err) {
-    resultsGrid.innerHTML = `<div class="empty-state">Error loading data. Check console.</div>`;
+    resultsGrid.innerHTML = `<div class="empty-state">❌ ${err.message}</div>`;
     console.error(err);
   }
 }
@@ -20,21 +26,19 @@ async function init() {
 function populateDropdowns() {
   const professions = new Set();
   const genders = new Set();
-
-  allRecords.forEach(record => {
-    if (record.profession) professions.add(record.profession.trim());
-    if (record.gender) genders.add(record.gender.trim());
+  allRecords.forEach(r => {
+    if (r.profession) professions.add(r.profession.toString().trim());
+    if (r.gender) genders.add(r.gender.toString().trim());
   });
 
-  const profSelect = document.getElementById('professionFilter');
-  [...professions].sort().forEach(prof => {
-    profSelect.add(new Option(prof, prof));
-  });
-
-  const genderSelect = document.getElementById('genderFilter');
-  [...genders].sort().forEach(gender => {
-    genderSelect.add(new Option(gender, gender));
-  });
+  const profSel = document.getElementById('professionFilter');
+  const genSel = document.getElementById('genderFilter');
+  
+  profSel.innerHTML = '<option value="all">All Professions</option>';
+  genSel.innerHTML = '<option value="all">All Genders</option>';
+  
+  [...professions].sort().forEach(p => profSel.add(new Option(p, p)));
+  [...genders].sort().forEach(g => genSel.add(new Option(g, g)));
 }
 
 function getAgeBracket(age) {
@@ -58,45 +62,29 @@ function applyFilters() {
   const profVal = document.getElementById('professionFilter').value;
   const genderVal = document.getElementById('genderFilter').value;
 
-  const filtered = allRecords.filter(record => {
-    // Check Age
-    let ageMatch = true;
-    if (ageVal !== "all") {
-      ageMatch = getAgeBracket(record.age) === ageVal;
-    }
-
-    // Check Profession
-    let profMatch = true;
-    if (profVal !== "all") {
-      profMatch = record.profession.trim() === profVal;
-    }
-
-    // Check Gender
-    let genderMatch = true;
-    if (genderVal !== "all") {
-      genderMatch = record.gender.trim() === genderVal;
-    }
-
-    return ageMatch && profMatch && genderMatch;
+  const filtered = allRecords.filter(r => {
+    const ab = getAgeBracket(r.age);
+    const pm = profVal === "all" || r.profession?.trim() === profVal;
+    const gm = genderVal === "all" || r.gender?.trim() === genderVal;
+    const am = ageVal === "all" || ab === ageVal;
+    return am && pm && gm;
   });
 
   renderGrid(filtered);
 }
 
 function renderGrid(records) {
-  const resultsGrid = document.getElementById('resultsGrid');
-  
-  if (records.length === 0) {
-    resultsGrid.innerHTML = `<div class="empty-state">No records match the selected filters.</div>`;
+  const grid = document.getElementById('resultsGrid');
+  if (!records.length) {
+    grid.innerHTML = `<div class="empty-state">No matching records.</div>`;
     return;
   }
-
-  resultsGrid.innerHTML = records.map(record => `
+  grid.innerHTML = records.map(r => `
     <div class="card">
-      <h3>${escapeHtml(record.name)}</h3>
-      <div class="detail"><strong>Age:</strong> ${escapeHtml(record.age.toString())}</div>
-      <div class="detail"><strong>Profession:</strong> ${escapeHtml(record.profession)}</div>
-      <div class="detail"><strong>Gender:</strong> ${escapeHtml(record.gender)}</div>
+      <h3>${escapeHtml(r.name)}</h3>
+      <div class="detail"><strong>Age:</strong> ${escapeHtml(String(r.age))}</div>
+      <div class="detail"><strong>Profession:</strong> ${escapeHtml(r.profession)}</div>
+      <div class="detail"><strong>Gender:</strong> ${escapeHtml(r.gender)}</div>
     </div>
   `).join('');
 }
@@ -104,9 +92,7 @@ function renderGrid(records) {
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/[&<>'"]/g, 
-    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-  );
+    t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
 }
 
-// Run on load
 init();
